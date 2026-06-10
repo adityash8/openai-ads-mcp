@@ -35,43 +35,24 @@ Approval/audit paths resolve relative to this package's directory by default;
 override with `OPENAI_ADS_REPO_ROOT`, `OPENAI_ADS_APPROVAL_DIR`, or
 `OPENAI_ADS_AUDIT_LOG`.
 
-## Install
+## Quick start
+
+Requires [Bun](https://bun.sh) (`curl -fsSL https://bun.sh/install | bash`).
 
 ```bash
+git clone https://github.com/adityash8/openai-ads-mcp.git
+cd openai-ads-mcp
 bun install
-cp .env.example .env   # then fill in your key(s)
 ```
 
-[Bun](https://bun.sh) is required — `index.ts` runs directly under Bun, and the
-build/test scripts use it. `npm install` works for dependencies, but plain Node
-cannot run the TypeScript source; run `bun run build` once and use
-`node dist/index.js` (Node 18+) if you prefer a Node runtime.
-
-## Configure
+**Claude Code** — one command, done:
 
 ```bash
-export OPENAI_ADS_DEFAULT_ACCOUNT="PRIMARY"   # a label you choose
-export OPENAI_ADS_PRIMARY_API_KEY="..."       # OPENAI_ADS_<ACCOUNT>_API_KEY
-export OPENAI_ADS_ENABLE_WRITES="0"           # keep writes off until you mean it
+claude mcp add openai-ads -e OPENAI_ADS_PRIMARY_API_KEY=YOUR_KEY -- bun "$PWD/index.ts"
 ```
 
-> [!NOTE]
-> `.env` is auto-loaded **only when running under Bun from this directory**.
-> `node dist/index.js` does not read `.env`, and MCP clients launch servers
-> from an arbitrary working directory — so for client registration, pass keys
-> through the `env` block as shown below.
-
-Each ad account is an uppercase, env-safe **account key**. The server reads its
-key from `OPENAI_ADS_<ACCOUNT_KEY>_API_KEY`, so multiple accounts just need
-multiple env vars. Tools accept an optional `account_key`; if omitted they fall
-back to `OPENAI_ADS_DEFAULT_ACCOUNT`.
-
-### Register with an MCP client
-
-stdio command: `bun /absolute/path/to/openai-ads-mcp/index.ts`
-(or `node /absolute/path/to/openai-ads-mcp/dist/index.js` after `bun run build`).
-
-`.mcp.json` / Claude Desktop example:
+**Claude Desktop / other MCP clients** — add to your config
+(`.mcp.json`, `claude_desktop_config.json`, etc.):
 
 ```json
 {
@@ -80,13 +61,32 @@ stdio command: `bun /absolute/path/to/openai-ads-mcp/index.ts`
       "command": "bun",
       "args": ["/absolute/path/to/openai-ads-mcp/index.ts"],
       "env": {
-        "OPENAI_ADS_DEFAULT_ACCOUNT": "PRIMARY",
-        "OPENAI_ADS_PRIMARY_API_KEY": "..."
+        "OPENAI_ADS_PRIMARY_API_KEY": "YOUR_KEY"
       }
     }
   }
 }
 ```
+
+That's it — one env var. No key yet? Skip it: the server starts fine and the
+four offline tools work; only network-backed tools need the key.
+
+### Configuration details
+
+- **Multiple ad accounts:** each account is an uppercase **account key**; its
+  key is read from `OPENAI_ADS_<ACCOUNT_KEY>_API_KEY` (e.g. add
+  `OPENAI_ADS_BRANDX_API_KEY` and pass `account_key: "BRANDX"` in tool calls).
+  The default account key is `PRIMARY`; change it with
+  `OPENAI_ADS_DEFAULT_ACCOUNT`.
+- **Writes are off by default.** Set `OPENAI_ADS_ENABLE_WRITES=1` *and* supply
+  an approval artifact (below) to enable mutations.
+- **Pass env vars through your MCP client config** (the `env` block / `-e`
+  flag), as shown above. A local `.env` works too, but only when running under
+  Bun from this directory — `node dist/index.js` and MCP clients launched from
+  other working directories won't read it.
+- **Prefer a Node runtime?** `bun run build` once, then point your client at
+  `node /absolute/path/to/openai-ads-mcp/dist/index.js` (Node 18+). Bun is
+  still required for build/test — plain Node can't run the TypeScript source.
 
 ## Tools
 
