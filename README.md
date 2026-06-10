@@ -37,7 +37,8 @@ override with `OPENAI_ADS_REPO_ROOT`, `OPENAI_ADS_APPROVAL_DIR`, or
 
 ## Quick start
 
-Requires [Bun](https://bun.sh) (`curl -fsSL https://bun.sh/install | bash`).
+First, clone and install (all three clients need this). Requires
+[Bun](https://bun.sh) — `curl -fsSL https://bun.sh/install | bash`.
 
 ```bash
 git clone https://github.com/adityash8/openai-ads-mcp.git
@@ -45,14 +46,32 @@ cd openai-ads-mcp
 bun install
 ```
 
-**Claude Code** — one command, done:
+One env var is all you need: `OPENAI_ADS_PRIMARY_API_KEY`. No key yet? Skip it —
+the server starts fine and the four offline tools work; only the network-backed
+tools need a key. Then pick your client below.
+
+### Claude Code
+
+From inside the cloned directory, one command (`$PWD` expands to the absolute
+path at add-time):
 
 ```bash
-claude mcp add openai-ads -e OPENAI_ADS_PRIMARY_API_KEY=YOUR_KEY -- bun "$PWD/index.ts"
+claude mcp add --env OPENAI_ADS_PRIMARY_API_KEY=YOUR_KEY --transport stdio openai-ads -- bun "$PWD/index.ts"
 ```
 
-**Claude Desktop / other MCP clients** — add to your config
-(`.mcp.json`, `claude_desktop_config.json`, etc.):
+This registers it for the current project. Add `--scope user` (before the
+`openai-ads` name) to make it available in every project. Verify with
+`claude mcp list`, then use it in a session: *"list my OpenAI Ads campaigns."*
+
+### Claude Desktop
+
+Edit the config file (**Settings → Developer → Edit Config**, or directly):
+
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+
+Add the server (use the **absolute** path to `index.ts`), then fully quit and
+reopen Claude Desktop:
 
 ```json
 {
@@ -68,8 +87,43 @@ claude mcp add openai-ads -e OPENAI_ADS_PRIMARY_API_KEY=YOUR_KEY -- bun "$PWD/in
 }
 ```
 
-That's it — one env var. No key yet? Skip it: the server starts fine and the
-four offline tools work; only network-backed tools need the key.
+The tools appear under the 🔌 / tools menu once the server connects.
+
+### ChatGPT
+
+> [!WARNING]
+> ChatGPT is more involved than Claude. ChatGPT's custom connectors **only
+> accept remote HTTPS MCP servers** (SSE / streaming HTTP) — it cannot launch a
+> local stdio server. So you bridge this server to HTTP and expose it over a
+> tunnel. Requires a **paid plan** (Plus, Pro, Business, Enterprise, or Edu);
+> Developer Mode is not on Free.
+
+1. **Bridge stdio → SSE** with [supergateway](https://github.com/supercorp-ai/supergateway):
+
+   ```bash
+   OPENAI_ADS_PRIMARY_API_KEY=YOUR_KEY \
+     npx -y supergateway --stdio "bun index.ts" --port 8000 --ssePath /sse
+   ```
+
+2. **Expose it over HTTPS** with a tunnel (ChatGPT must reach it from the
+   internet) — e.g. [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)
+   or [ngrok](https://ngrok.com):
+
+   ```bash
+   cloudflared tunnel --url http://localhost:8000   # prints an https://… URL
+   ```
+
+3. **Add the connector in ChatGPT:** Settings → Apps → Advanced →
+   **Developer mode** (enable) → **Create app**. Set the MCP server URL to your
+   tunnel's `https://…/sse` endpoint. It lands under "Drafts," then is callable
+   in chat.
+
+> [!CAUTION]
+> A tunnel puts this server on the public internet. Keep
+> `OPENAI_ADS_ENABLE_WRITES=0` (the default) so it stays read-only, put auth on
+> the tunnel (supergateway `--header "Authorization: Bearer …"`, or a
+> Cloudflare Access policy), and shut the tunnel down when you're done. Treat
+> the URL as a secret.
 
 ### Configuration details
 
@@ -80,7 +134,7 @@ four offline tools work; only network-backed tools need the key.
   `OPENAI_ADS_DEFAULT_ACCOUNT`.
 - **Writes are off by default.** Set `OPENAI_ADS_ENABLE_WRITES=1` *and* supply
   an approval artifact (below) to enable mutations.
-- **Pass env vars through your MCP client config** (the `env` block / `-e`
+- **Pass env vars through your MCP client config** (the `env` block / `--env`
   flag), as shown above. A local `.env` works too, but only when running under
   Bun from this directory — `node dist/index.js` and MCP clients launched from
   other working directories won't read it.
