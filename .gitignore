@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Secrets — never commit real keys
+.env
+.env.local
+*.local
+
+# Runtime artifacts (can contain budgets, account IDs, campaign data)
+tasks/openai-ads/audit.jsonl
+tasks/openai-ads/approvals/*.json
+
+# OS / editor
+.DS_Store
+*.log

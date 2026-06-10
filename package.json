@@ -1,0 +1,50 @@
+{
+  "name": "openai-ads-mcp",
+  "version": "0.1.0",
+  "description": "Model Context Protocol server for OpenAI's ChatGPT Ads platform — reads, insights, optimization drafts, and approval-gated live mutations.",
+  "type": "module",
+  "main": "index.ts",
+  "license": "MIT",
+  "author": "Aditya Sheth",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adityash8/openai-ads-mcp.git"
+  },
+  "homepage": "https://github.com/adityash8/openai-ads-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/adityash8/openai-ads-mcp/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "openai",
+    "openai-ads",
+    "chatgpt-ads",
+    "advertising",
+    "ads",
+    "agent"
+  ],
+  "files": [
+    "index.ts",
+    "src",
+    "scripts",
+    "dist",
+    "README.md",
+    "LICENSE",
+    ".env.example"
+  ],
+  "scripts": {
+    "build": "bun build index.ts --outdir dist --target node",
+    "probe:live": "bun scripts/probe-live.ts",
+    "start": "bun index.ts",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.9.3"
+  }
+}
