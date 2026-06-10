@@ -11,7 +11,8 @@ from Claude, OpenClaw, Hermes, or any MCP-compatible agent.
 > mid-2026, OpenAI's ChatGPT Ads is an **invite/beta program** — there is no
 > public self-serve Ads API, only a web Ads Manager and a measurement
 > pixel/Conversions API. Without a key for that endpoint, the network-backed
-> tools will return auth errors.
+> tools fail fast with a `Missing OPENAI_ADS_<ACCOUNT>_API_KEY` error before
+> making any network call.
 >
 > **So treat this repo as a reference / template MCP**: a working blueprint for
 > wrapping OpenAI Ads as an agent tool, ready to use the moment you have API
@@ -26,17 +27,25 @@ from Claude, OpenClaw, Hermes, or any MCP-compatible agent.
 - **Live mutations are double-gated.** A write executes only when both are true:
   - `OPENAI_ADS_ENABLE_WRITES=1`, and
   - a matching approval artifact exists at `tasks/openai-ads/approvals/<id>.json`
-    (shape below) whose declared budget/countries/destructiveness bound the operation.
+    inside this repo (shape below) whose declared budget/countries/destructiveness
+    bound the operation.
 - **Every mutation is audit-logged** to `tasks/openai-ads/audit.jsonl` (gitignored).
+
+Approval/audit paths resolve relative to this package's directory by default;
+override with `OPENAI_ADS_REPO_ROOT`, `OPENAI_ADS_APPROVAL_DIR`, or
+`OPENAI_ADS_AUDIT_LOG`.
 
 ## Install
 
 ```bash
-bun install            # or: npm install
+bun install
 cp .env.example .env   # then fill in your key(s)
 ```
 
-Requires [Bun](https://bun.sh) for dev/test. The built `dist/` runs on Node 18+.
+[Bun](https://bun.sh) is required — `index.ts` runs directly under Bun, and the
+build/test scripts use it. `npm install` works for dependencies, but plain Node
+cannot run the TypeScript source; run `bun run build` once and use
+`node dist/index.js` (Node 18+) if you prefer a Node runtime.
 
 ## Configure
 
@@ -45,6 +54,12 @@ export OPENAI_ADS_DEFAULT_ACCOUNT="PRIMARY"   # a label you choose
 export OPENAI_ADS_PRIMARY_API_KEY="..."       # OPENAI_ADS_<ACCOUNT>_API_KEY
 export OPENAI_ADS_ENABLE_WRITES="0"           # keep writes off until you mean it
 ```
+
+> [!NOTE]
+> `.env` is auto-loaded **only when running under Bun from this directory**.
+> `node dist/index.js` does not read `.env`, and MCP clients launch servers
+> from an arbitrary working directory — so for client registration, pass keys
+> through the `env` block as shown below.
 
 Each ad account is an uppercase, env-safe **account key**. The server reads its
 key from `OPENAI_ADS_<ACCOUNT_KEY>_API_KEY`, so multiple accounts just need
@@ -91,6 +106,11 @@ stdio command: `bun /absolute/path/to/openai-ads-mcp/index.ts`
 
 ## Approval artifact shape
 
+`operations` must contain at least one entry. Valid operation types:
+`create_campaign`, `update_campaign`, `campaign_state`, `create_ad_group`,
+`update_ad_group`, `ad_group_state`, `create_ad`, `update_ad`, `ad_state`.
+State operations take `{ "id": "...", "action": "activate" | "pause" | "archive" }`.
+
 ```json
 {
   "id": "example-approval",
@@ -100,9 +120,28 @@ stdio command: `bun /absolute/path/to/openai-ads-mcp/index.ts`
   "max_budget_micros": 10000000,
   "approved_countries": ["US"],
   "allow_destructive": false,
-  "operations": []
+  "operations": [
+    { "type": "ad_state", "id": "ad_123", "action": "pause" }
+  ]
 }
 ```
+
+## Conversion event shape
+
+`openai_ads_validate_conversion_event` expects:
+
+```json
+{
+  "type": "order_created",
+  "timestamp_ms": 1764547200000,
+  "data": {}
+}
+```
+
+`type` must be one of: `appointment_scheduled`, `checkout_started`,
+`contents_viewed`, `custom`, `items_added`, `lead_created`, `order_created`,
+`page_viewed`, `registration_completed`, `subscription_created`,
+`trial_started`. `id`, `timestamp_ms`, and `metadata` are optional.
 
 ## Develop
 

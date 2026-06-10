@@ -12,9 +12,24 @@ import {
   summarizeInsights,
   validateConversionEvent,
 } from "./src/reports";
+import { getServerConfig } from "./src/config";
 import { createOpenAiAdsServer } from "./src/server";
 import { missingKeyHint, runLiveReadOnlyProbe } from "./src/liveProbe";
 import type { ApprovalArtifact, Operation } from "./src/schemas";
+
+describe("config", () => {
+  test("default repoRoot is the package root, keeping approvals/audit inside the repo", () => {
+    const config = getServerConfig({});
+    expect(config.repoRoot).toBe(join(import.meta.dir));
+    expect(config.approvalDir.startsWith(config.repoRoot)).toBe(true);
+    expect(config.auditLogPath.startsWith(config.repoRoot)).toBe(true);
+  });
+
+  test("OPENAI_ADS_REPO_ROOT overrides the default", () => {
+    const config = getServerConfig({ OPENAI_ADS_REPO_ROOT: "/custom/root" });
+    expect(config.repoRoot).toBe("/custom/root");
+  });
+});
 
 describe("AdsClient", () => {
   test("constructs authenticated JSON requests with query params", async () => {

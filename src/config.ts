@@ -20,8 +20,7 @@ export function getServerConfig(env: NodeJS.ProcessEnv = process.env): ServerCon
     path.dirname(fileURLToPath(import.meta.url)),
     ".."
   );
-  const repoRoot =
-    env.OPENAI_ADS_REPO_ROOT || path.resolve(packageRoot, "..", "..");
+  const repoRoot = env.OPENAI_ADS_REPO_ROOT || packageRoot;
   const approvalDir =
     env.OPENAI_ADS_APPROVAL_DIR || path.join(repoRoot, DEFAULT_APPROVAL_DIR);
   const auditLogPath =
